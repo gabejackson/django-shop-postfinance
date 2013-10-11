@@ -137,7 +137,7 @@ class OffsitePostfinanceBackend(object):
         IP=84.226.127.220&
         SHASIGN=CEE483B0557B8E3437A55094221E15C7DB6A0D63
         
-        Cornfirms that payment has been completed and marks invoice as paid.
+        Confirms that payment has been completed and marks invoice as paid.
         This can come from two sources: Wither the client was redirected to our success page from postfinance (and so the order
         information is contained in GET parameters), or the client messed up and postfinance sends us a direct server-to-server
         http connection with parameters passed in the POST fields.
@@ -146,6 +146,9 @@ class OffsitePostfinanceBackend(object):
         
         data = request.REQUEST
         # Verify that the info is valid (with the SHA sum)
+        # Beware, the SHA Secret Key may be different than POSTFINANCE_SECRET_KEY here because postfinance allows
+        # to set a SHA-OUT Key as well: Konfiguration -> Technische Informationen -> Transaktions-Feedback ->
+        # Sicherheit der Anfrageparameter -> SHA-1-OUT Signatur
         valid = security_check(data, settings.POSTFINANCE_SECRET_KEY)
         if valid:
             order_id = data['orderID']
@@ -153,27 +156,30 @@ class OffsitePostfinanceBackend(object):
             transaction_id = data['PAYID']
             amount = data['amount']
             # Create an IPN transaction trace in the database
+            # Beware, these parameters only get returned if you select them in the e-payment
+            # backend: Konfiguration -> Technische Informationen -> Transaktions-Feedback ->
+            # Dynamische e-Commerce parameter
             PostfinanceIPN.objects.create(
-                orderID=order_id,
-                currency=order.get('currency', ''),
-                amount=order.get('amount', ''),
-                PM=order.get('PM', ''),
-                ACCEPTANCE=order.get('ACCEPTANCE', ''),
-                STATUS=order.get('STATUS', ''),
-                CARDNO=order.get('CARDNO', ''),
-                CN=order.get('CN', ''),
-                TRXDATE=order.get('TRXDATE', ''),
-                PAYID=order.get('PAYID', ''),
-                NCERROR=order.get('NCERROR', ''),
-                BRAND=order.get('BRAND', ''),
-                IPCTY=order.get('IPCTY', ''),
-                CCCTY=order.get('CCCTY', ''),
-                ECI=order.get('ECI', ''),
-                CVCCheck=order.get('CVCCheck', ''),
-                AAVCheck=order.get('AAVCheck', ''),
-                VC=order.get('VC', ''),
-                IP=order.get('IP', ''),
-                SHASIGNorder =order.get('SHASIGNorder', ''),
+                orderID=data.get('orderID', ''),
+                currency=data.get('currency', ''),
+                amount=data.get('amount', ''),
+                PM=data.get('PM', ''),
+                ACCEPTANCE=data.get('ACCEPTANCE', ''),
+                STATUS=data.get('STATUS', ''),
+                CARDNO=data.get('CARDNO', ''),
+                CN=data.get('CN', ''),
+                TRXDATE=data.get('TRXDATE', ''),
+                PAYID=data.get('PAYID', ''),
+                NCERROR=data.get('NCERROR', ''),
+                BRAND=data.get('BRAND', ''),
+                IPCTY=data.get('IPCTY', ''),
+                CCCTY=data.get('CCCTY', ''),
+                ECI=data.get('ECI', ''),
+                CVCCheck=data.get('CVCCheck', ''),
+                AAVCheck=data.get('AAVCheck', ''),
+                VC=data.get('VC', ''),
+                IP=data.get('IP', ''),
+                SHASIGN=data.get('SHASIGN', ''),
             )
             # This actually records the payment in the shop's database
             self.shop.confirm_payment(order, amount, transaction_id, self.backend_name)
