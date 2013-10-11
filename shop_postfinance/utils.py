@@ -17,7 +17,7 @@ def security_check(data, secret_key):
     hash_string = ""
     contents = dict([(key.upper(), value) for key, value in data.items()])
     for key, value in sorted(contents.items()):
-        if key != 'SHASIGN':
+        if key != 'SHASIGN' and value:
             hash_string += "%s=%s%s" % (key, value, secret_key)
     output = hashlib.sha1(hash_string).hexdigest().upper()
     return output == original
